@@ -1,2 +1,9 @@
-com/movievault/MovieVaultApplication.class
+com/movievault/model/ShowTime.class
 com/movievault/App.class
+com/movievault/repository/UserRepository.class
+com/movievault/model/User.class
+com/movievault/MovieVaultApplication.class
+com/movievault/model/Movie.class
+com/movievault/model/Theater.class
+com/movievault/model/Booking.class
+com/movievault/controller/UserController.class
