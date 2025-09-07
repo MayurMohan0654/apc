@@ -31,11 +31,13 @@ public class MovieVaultApplication {
             System.out.println("Database connection successful!");
             System.setProperty("spring.datasource.username", username);
             System.setProperty("spring.datasource.password", password);
+            System.setProperty("spring.datasource.url", url);
 
             SpringApplication.run(MovieVaultApplication.class, args);
 
         } catch (Exception e) {
             System.err.println("error: " + e.getMessage());
+            System.err.println("create database if not exists.");
         }finally{
             scanner.close();
         }
