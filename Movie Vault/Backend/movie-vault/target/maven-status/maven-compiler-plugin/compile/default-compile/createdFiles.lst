@@ -5,6 +5,7 @@ com/movievault/model/Booking.class
 com/movievault/controller/BookingController.class
 com/movievault/controller/UserController.class
 com/movievault/repository/MovieRepository.class
+com/movievault/App.class
 com/movievault/repository/UserRepository.class
 com/movievault/controller/ShowTimeController.class
 com/movievault/MovieVaultApplication.class
