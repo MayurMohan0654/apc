@@ -21,7 +21,6 @@ public class Vault {
     
     public static void main(String[] args) {
         System.out.println("---------------------------- Welcome to Movie Vault ----------------------------");
-        
         while (true) {
             if (currentUser == null) {
                 showMainMenu();
