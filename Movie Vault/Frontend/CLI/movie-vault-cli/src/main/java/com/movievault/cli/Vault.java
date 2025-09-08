@@ -1,17 +1,11 @@
 package com.movievault.cli;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.util.*;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Scanner;
-
-import org.json.JSONArray;
-import org.json.JSONObject;
+import kong.unirest.HttpResponse;
+import kong.unirest.JsonNode;
+import kong.unirest.Unirest;
+import kong.unirest.json.*;
 
 public class Vault {
     private static final String BASE_URL = "http://localhost:8080/api";
@@ -20,6 +14,9 @@ public class Vault {
     private static boolean isTheater = false; // Flag to track if logged in as theater
     
     public static void main(String[] args) {
+        // Configure Unirest
+        Unirest.config().defaultBaseUrl(BASE_URL);
+        
         System.out.println("---------------------------- Welcome to Movie Vault ----------------------------");
         while (true) {
             if (currentUser == null) {
@@ -182,32 +179,14 @@ public class Vault {
         String password = scanner.nextLine();
         
         try {
-            URL url = new URL(BASE_URL + "/users/login");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/users/login")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject()
+                    .put("email", email)
+                    .put("password", password))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("email", email);
-            jsonInput.put("password", password);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_OK ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 JSONObject userJson = jsonResponse.getJSONObject("user");
@@ -238,34 +217,12 @@ public class Vault {
         String phone = scanner.nextLine();
         
         try {
-            URL url = new URL(BASE_URL + "/users/register");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/users/register")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject().put("name", name).put("email", email).put("password", password).put("phone", phone))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("name", name);
-            jsonInput.put("email", email);
-            jsonInput.put("password", password);
-            jsonInput.put("phone", phone);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_CREATED ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 System.out.println("Registration successful! Please login.");
@@ -286,32 +243,14 @@ public class Vault {
         String password = scanner.nextLine();
         
         try {
-            URL url = new URL(BASE_URL + "/theaters/login");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/theaters/login")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject()
+                    .put("name", name)
+                    .put("password", password))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("name", name);
-            jsonInput.put("password", password);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_OK ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 JSONObject theaterJson = jsonResponse.getJSONObject("theater");
@@ -340,33 +279,15 @@ public class Vault {
         String password = scanner.nextLine();
         
         try {
-            URL url = new URL(BASE_URL + "/theaters/register");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/theaters/register")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject()
+                    .put("name", name)
+                    .put("city", city)
+                    .put("password", password))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("name", name);
-            jsonInput.put("city", city);
-            jsonInput.put("password", password);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_CREATED ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 System.out.println("Registration successful! Please login.");
@@ -381,18 +302,7 @@ public class Vault {
     // USER FUNCTIONALITY
     private static void viewAllShowtimes() {
         try {
-            URL url = new URL(BASE_URL + "/showtimes");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray showtimes = new JSONArray(response.toString());
+            JSONArray showtimes = Unirest.get("/showtimes").asJson().getBody().getArray();
             
             System.out.println("\n---------------------------- All Showtimes ----------------------------");
             if (showtimes.length() == 0) {
@@ -413,18 +323,11 @@ public class Vault {
         long movieId = getIntInput();
         
         try {
-            URL url = new URL(BASE_URL + "/showtimes/movie/" + movieId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            HttpResponse<JsonNode> response = Unirest.get("/showtimes/movie/{movieId}")
+                .routeParam("movieId", String.valueOf(movieId))
+                .asJson();
             
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray showtimes = new JSONArray(response.toString());
+            JSONArray showtimes = response.getBody().getArray();
             
             System.out.println("\n---------------------------- Showtimes for Movie ID " + movieId + " ----------------------------");
             if (showtimes.length() == 0) {
@@ -445,18 +348,11 @@ public class Vault {
         long theaterId = getIntInput();
         
         try {
-            URL url = new URL(BASE_URL + "/showtimes/theater/" + theaterId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            HttpResponse<JsonNode> response = Unirest.get("/showtimes/theater/{theaterId}")
+                .routeParam("theaterId", String.valueOf(theaterId))
+                .asJson();
             
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray showtimes = new JSONArray(response.toString());
+            JSONArray showtimes = response.getBody().getArray();
             
             System.out.println("\n---------------------------- Showtimes for Theater ID " + theaterId + " ----------------------------");
             if (showtimes.length() == 0) {
@@ -477,36 +373,18 @@ public class Vault {
         long showtimeId = getIntInput();
         
         try {
-            URL url = new URL(BASE_URL + "/bookings");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/bookings")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject()
+                    .put("userId", currentUser.get("id"))
+                    .put("showTimeId", showtimeId))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("userId", currentUser.get("id"));
-            jsonInput.put("showTimeId", showtimeId);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_CREATED ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 System.out.println("Booking successful! Your booking ID is: " + 
-                                   jsonResponse.getJSONObject("booking").getLong("id"));
+                                  jsonResponse.getJSONObject("booking").getLong("id"));
             } else {
                 System.out.println("Booking failed: " + jsonResponse.getString("message"));
             }
@@ -517,18 +395,11 @@ public class Vault {
     
     private static void viewMyBookings() {
         try {
-            URL url = new URL(BASE_URL + "/bookings/user/" + currentUser.get("id"));
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            HttpResponse<JsonNode> response = Unirest.get("/bookings/user/{userId}")
+                .routeParam("userId", String.valueOf(currentUser.get("id")))
+                .asJson();
             
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray bookings = new JSONArray(response.toString());
+            JSONArray bookings = response.getBody().getArray();
             
             System.out.println("\n---------------------------- My Bookings ----------------------------");
             if (bookings.length() == 0) {
@@ -555,21 +426,11 @@ public class Vault {
         long bookingId = getIntInput();
         
         try {
-            URL url = new URL(BASE_URL + "/bookings/" + bookingId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("DELETE");
+            HttpResponse<JsonNode> response = Unirest.delete("/bookings/{bookingId}")
+                .routeParam("bookingId", String.valueOf(bookingId))
+                .asJson();
             
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_OK ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 System.out.println("Booking cancelled successfully!");
@@ -591,34 +452,16 @@ public class Vault {
         String endTime = scanner.nextLine();
         
         try {
-            URL url = new URL(BASE_URL + "/showtimes");
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("POST");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setDoOutput(true);
+            HttpResponse<JsonNode> response = Unirest.post("/showtimes")
+                .header("Content-Type", "application/json")
+                .body(new JSONObject()
+                    .put("theaterId", currentUser.get("id"))
+                    .put("movieId", movieId)
+                    .put("startTime", startTime)
+                    .put("endTime", endTime))
+                .asJson();
             
-            JSONObject jsonInput = new JSONObject();
-            jsonInput.put("theaterId", currentUser.get("id"));
-            jsonInput.put("movieId", movieId);
-            jsonInput.put("startTime", startTime);
-            jsonInput.put("endTime", endTime);
-            
-            try (OutputStream os = conn.getOutputStream()) {
-                byte[] input = jsonInput.toString().getBytes("utf-8");
-                os.write(input, 0, input.length);
-            }
-            
-            int responseCode = conn.getResponseCode();
-            BufferedReader br = new BufferedReader(new InputStreamReader(
-                    responseCode == HttpURLConnection.HTTP_CREATED ? 
-                    conn.getInputStream() : conn.getErrorStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONObject jsonResponse = new JSONObject(response.toString());
+            JSONObject jsonResponse = response.getBody().getObject();
             
             if (jsonResponse.getBoolean("success")) {
                 System.out.println("Showtime added successfully!");
@@ -632,18 +475,11 @@ public class Vault {
     
     private static void viewTheaterShowtimes() {
         try {
-            URL url = new URL(BASE_URL + "/showtimes/theater/" + currentUser.get("id"));
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            HttpResponse<JsonNode> response = Unirest.get("/showtimes/theater/{theaterId}")
+                .routeParam("theaterId", String.valueOf(currentUser.get("id")))
+                .asJson();
             
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray showtimes = new JSONArray(response.toString());
+            JSONArray showtimes = response.getBody().getArray();
             
             System.out.println("\n---------------------------- My Theater's Showtimes ----------------------------");
             if (showtimes.length() == 0) {
@@ -664,18 +500,11 @@ public class Vault {
         long showtimeId = getIntInput();
         
         try {
-            URL url = new URL(BASE_URL + "/bookings/showtime/" + showtimeId);
-            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
+            HttpResponse<JsonNode> response = Unirest.get("/bookings/showtime/{showtimeId}")
+                .routeParam("showtimeId", String.valueOf(showtimeId))
+                .asJson();
             
-            BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream(), "utf-8"));
-            StringBuilder response = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                response.append(line);
-            }
-            
-            JSONArray bookings = new JSONArray(response.toString());
+            JSONArray bookings = response.getBody().getArray();
             
             System.out.println("\n---------------------------- Bookings for Showtime ID " + showtimeId + " ----------------------------");
             if (bookings.length() == 0) {
