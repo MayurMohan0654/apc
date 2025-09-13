@@ -178,35 +178,112 @@
         function loadShowtimes() {
             showtimeList.innerHTML = '<div class="loading">Loading showtimes...</div>';
             
-            fetch(`${API_BASE_URL}/showtimes`)
-                .then(response => response.json())
+            // First load movies for filter
+            fetch(`${API_BASE_URL}/movies`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(movies => {
+                    if (!movies || !Array.isArray(movies)) {
+                        console.error('Invalid movies data:', movies);
+                        movies = []; // Fallback to empty array if data is invalid
+                    }
+                    
+                    // Populate movies dropdown
+                    movieFilter.innerHTML = '<option value="">All Movies</option>';
+                    movies.forEach(movie => {
+                        const option = document.createElement('option');
+                        option.value = movie.id; // Use movie ID instead of title
+                        option.textContent = movie.title;
+                        movieFilter.appendChild(option);
+                    });
+                    
+                    // Then load theaters for filter
+                    return fetch(`${API_BASE_URL}/theaters`);
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(theaters => {
+                    if (!theaters || !Array.isArray(theaters)) {
+                        console.error('Invalid theaters data:', theaters);
+                        theaters = []; // Fallback to empty array if data is invalid
+                    }
+                    
+                    // Populate theaters dropdown
+                    theaterFilter.innerHTML = '<option value="">All Theaters</option>';
+                    theaters.forEach(theater => {
+                        const option = document.createElement('option');
+                        option.value = theater.id; // Use theater ID instead of name
+                        option.textContent = theater.name;
+                        theaterFilter.appendChild(option);
+                    });
+                    
+                    // Now fetch showtimes based on filters
+                    return fetchShowtimes();
+                })
+                .catch(error => {
+                    console.error('Error loading filters:', error);
+                    showtimeList.innerHTML = '<div class="message">Error loading filters. Please try again.</div>';
+                });
+        }
+        
+        // Fetch showtimes with optional filters
+        function fetchShowtimes() {
+            const movieId = movieFilter.value;
+            const theaterId = theaterFilter.value;
+            
+            let url = `${API_BASE_URL}/showtimes`;
+            
+            // Apply filters if selected
+            if (movieId && theaterId) {
+                // If both filters are applied, we need to fetch all and filter client-side
+                // since we don't have an endpoint for both filters
+                console.log("Filtering by both movie ID and theater ID");
+            } else if (movieId) {
+                url = `${API_BASE_URL}/showtimes/movie/${movieId}`;
+                console.log("Filtering by movie ID:", movieId);
+            } else if (theaterId) {
+                url = `${API_BASE_URL}/showtimes/theater/${theaterId}`;
+                console.log("Filtering by theater ID:", theaterId);
+            }
+            
+            console.log("Fetching showtimes from:", url);
+            
+            return fetch(url)
+                .then(response => {
+                    console.log("Response status:", response.status);
+                    return response.json();
+                })
                 .then(data => {
-                    if (data.length === 0) {
+                    console.log("Received data:", data);
+                    
+                    if (!data || data.length === 0) {
                         showtimeList.innerHTML = '<div class="message">No showtimes available.</div>';
                         return;
                     }
                     
-                    // Populate movies dropdown
-                    const movies = [...new Set(data.map(showtime => showtime.movie.title))];
-                    movieFilter.innerHTML = '<option value="">All Movies</option>';
-                    movies.forEach(movie => {
-                        const option = document.createElement('option');
-                        option.value = movie;
-                        option.textContent = movie;
-                        movieFilter.appendChild(option);
-                    });
+                    // If both filters are applied, filter client-side
+                    let filteredData = data;
+                    if (movieId && theaterId) {
+                        filteredData = data.filter(showtime => 
+                            showtime.movie.id == movieId && 
+                            showtime.theater.id == theaterId
+                        );
+                        
+                        if (filteredData.length === 0) {
+                            showtimeList.innerHTML = '<div class="message">No showtimes match your criteria.</div>';
+                            return;
+                        }
+                    }
                     
-                    // Populate theaters dropdown
-                    const theaters = [...new Set(data.map(showtime => showtime.theater.name))];
-                    theaterFilter.innerHTML = '<option value="">All Theaters</option>';
-                    theaters.forEach(theater => {
-                        const option = document.createElement('option');
-                        option.value = theater;
-                        option.textContent = theater;
-                        theaterFilter.appendChild(option);
-                    });
-                    
-                    renderShowtimes(data);
+                    renderShowtimes(filteredData);
                 })
                 .catch(error => {
                     console.error('Error loading showtimes:', error);
@@ -216,50 +293,48 @@
         
         // Render showtimes
         function renderShowtimes(showtimes) {
-            const movieFilterValue = movieFilter.value;
-            const theaterFilterValue = theaterFilter.value;
+            // The showtimes are already filtered by the server or by fetchShowtimes
+            // so we don't need to filter them again here
             
-            // Apply filters
-            let filteredShowtimes = showtimes;
-            if (movieFilterValue) {
-                filteredShowtimes = filteredShowtimes.filter(showtime => 
-                    showtime.movie.title === movieFilterValue
-                );
-            }
-            if (theaterFilterValue) {
-                filteredShowtimes = filteredShowtimes.filter(showtime => 
-                    showtime.theater.name === theaterFilterValue
-                );
-            }
+            console.log("Rendering showtimes:", showtimes);
             
-            if (filteredShowtimes.length === 0) {
+            if (!showtimes || showtimes.length === 0) {
                 showtimeList.innerHTML = '<div class="message">No showtimes match your criteria.</div>';
                 return;
             }
             
             showtimeList.innerHTML = '';
             
-            filteredShowtimes.forEach(showtime => {
-                const showTimeCard = document.createElement('div');
-                showTimeCard.className = 'showtime-card';
-                
-                const startTime = new Date(showtime.startTime);
-                const endTime = new Date(showtime.endTime);
-                
-                showTimeCard.innerHTML = `
-                    <div class="showtime-movie">${showtime.movie.title}</div>
-                    <div class="showtime-theater">${showtime.theater.name}, ${showtime.theater.city || 'N/A'}</div>
-                    <div class="showtime-details">
-                        <div>Date: ${startTime.toLocaleDateString()}</div>
-                        <div>Time: ${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}</div>
-                        <div>Duration: ${showtime.movie.duration} mins</div>
-                    </div>
-                    <div class="showtime-actions">
-                        <button class="btn book-btn" data-id="${showtime.id}" data-title="${showtime.movie.title}" data-theater="${showtime.theater.name}" data-time="${startTime.toLocaleTimeString()}">Book Now</button>
-                    </div>
-                `;
-                
-                showtimeList.appendChild(showTimeCard);
+            showtimes.forEach(showtime => {
+                try {
+                    if (!showtime.movie || !showtime.theater) {
+                        console.error("Invalid showtime data:", showtime);
+                        return; // Skip this showtime
+                    }
+                    
+                    const showTimeCard = document.createElement('div');
+                    showTimeCard.className = 'showtime-card';
+                    
+                    const startTime = new Date(showtime.startTime);
+                    const endTime = new Date(showtime.endTime);
+                    
+                    showTimeCard.innerHTML = `
+                        <div class="showtime-movie">${showtime.movie.title}</div>
+                        <div class="showtime-theater">${showtime.theater.name}, ${showtime.theater.city || 'N/A'}</div>
+                        <div class="showtime-details">
+                            <div>Date: ${startTime.toLocaleDateString()}</div>
+                            <div>Time: ${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}</div>
+                            <div>Duration: ${showtime.movie.duration || 'N/A'} mins</div>
+                        </div>
+                        <div class="showtime-actions">
+                            <button class="btn book-btn" data-id="${showtime.id}" data-title="${showtime.movie.title}" data-theater="${showtime.theater.name}" data-time="${startTime.toLocaleTimeString()}">Book Now</button>
+                        </div>
+                    `;
+                    
+                    showtimeList.appendChild(showTimeCard);
+                } catch (err) {
+                    console.error("Error rendering showtime:", err, showtime);
+                }
             });
             
             // Add event listeners to book buttons
@@ -398,11 +473,11 @@
         
         // Filter handlers
         movieFilter.addEventListener('change', () => {
-            loadShowtimes();
+            fetchShowtimes();
         });
         
         theaterFilter.addEventListener('change', () => {
-            loadShowtimes();
+            fetchShowtimes();
         });
         
         // Modal handlers

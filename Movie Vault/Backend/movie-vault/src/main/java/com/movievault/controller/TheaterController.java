@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -17,6 +18,27 @@ public class TheaterController {
     
     @Autowired
     private TheaterRepository theaterRepository;
+    
+    // Get all theaters
+    @GetMapping
+    public List<Theater> getAllTheaters() {
+        return theaterRepository.findAll();
+    }
+    
+    // Get theater by ID
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getTheaterById(@PathVariable Long id) {
+        Optional<Theater> theater = theaterRepository.findById(id);
+        
+        if (theater.isPresent()) {
+            return ResponseEntity.ok(theater.get());
+        } else {
+            Map<String, Object> response = new HashMap<>();
+            response.put("success", false);
+            response.put("message", "Theater not found with id " + id);
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+    }
     
     @PostMapping("/register")
     public ResponseEntity<?> registerTheater(@RequestBody Theater theater) {
