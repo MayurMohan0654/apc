@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theater Dashboard - Movie Vault</title>
+    <link rel="stylesheet" href="./css/theater-dash.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">Movie<span>Vault</span></a>
+            <div class="theater-info">
+                <span id="theater-name">Theater Name</span>
+                <button id="logout-btn" class="btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>Management</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="#" class="active" data-page="add-showtime">Add Showtime</a></li>
+                    <li><a href="#" data-page="my-showtimes">My Showtimes</a></li>
+                    <li><a href="#" data-page="movies">Movies</a></li>
+                </ul>
+            </div>
+            
+            <div class="main-content">
+                <!-- Add Showtime Page -->
+                <div class="content-page active" id="add-showtime-page">
+                    <div class="page-title">
+                        <h2>Add New Showtime</h2>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Showtime Details</h3>
+                        </div>
+                        <form id="add-showtime-form">
+                            <div class="form-group">
+                                <label for="movie-select">Select Movie</label>
+                                <select id="movie-select" required>
+                                    <option value="">-- Select a movie --</option>
+                                    <!-- Movies will be populated dynamically -->
+                                </select>
+                            </div>
+                            
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="start-time">Start Time</label>
+                                    <input type="datetime-local" id="start-time" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="end-time">End Time</label>
+                                    <input type="datetime-local" id="end-time" required>
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn">Add Showtime</button>
+                            <div class="error-message" id="add-showtime-error"></div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- My Showtimes Page -->
+                <div class="content-page" id="my-showtimes-page" style="display: none;">
+                    <div class="page-title">
+                        <h2>My Showtimes</h2>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Scheduled Showtimes</h3>
+                        </div>
+                        <div id="showtime-list" class="showtime-list">
+                            <div class="loading">Loading showtimes...</div>
+                            <!-- Showtimes will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Movies Page -->
+                <div class="content-page" id="movies-page" style="display: none;">
+                    <div class="page-title">
+                        <h2>Available Movies</h2>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Movie Catalog</h3>
+                        </div>
+                        <div id="movie-list" class="movie-list">
+                            <div class="loading">Loading movies...</div>
+                            <!-- Movies will be populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API base URL
+        const API_BASE_URL = 'http://localhost:8080/api';
+        
+        // Check if theater is logged in
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const userType = localStorage.getItem('userType');
+        
+        // Redirect if not logged in or not a theater
+        if (!currentUser || userType !== 'theater') {
+            window.location.href = 'index.html';
+        }
+        
+        // DOM elements
+        const theaterNameElement = document.getElementById('theater-name');
+        const logoutBtn = document.getElementById('logout-btn');
+        const sidebarLinks = document.querySelectorAll('.sidebar-menu a');
+        const contentPages = document.querySelectorAll('.content-page');
+        const addShowtimeForm = document.getElementById('add-showtime-form');
+        const movieSelect = document.getElementById('movie-select');
+        const startTimeInput = document.getElementById('start-time');
+        const endTimeInput = document.getElementById('end-time');
+        const addShowtimeError = document.getElementById('add-showtime-error');
+        const showtimeList = document.getElementById('showtime-list');
+        const movieList = document.getElementById('movie-list');
+        
+        // Set theater name
+        theaterNameElement.textContent = currentUser.name;
+        
+        // Logout handler
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('currentUser');
+            localStorage.removeItem('userType');
+            window.location.href = 'index.html';
+        });
+        
+        // Navigation handler
+        sidebarLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                sidebarLinks.forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                link.classList.add('active');
+                
+                // Show selected page
+                const pageId = link.getAttribute('data-page') + '-page';
+                contentPages.forEach(page => {
+                    if (page.id === pageId) {
+                        page.style.display = 'block';
+                        
+                        // Load data for the selected page
+                        if (pageId === 'add-showtime-page') {
+                            loadMovies();
+                        } else if (pageId === 'my-showtimes-page') {
+                            loadTheaterShowtimes();
+                        } else if (pageId === 'movies-page') {
+                            loadMovies();
+                        }
+                    } else {
+                        page.style.display = 'none';
+                    }
+                });
+            });
+        });
+        
+        // Load movies for select dropdown and movie list
+        function loadMovies() {
+            // Clear previous error messages
+            addShowtimeError.style.display = 'none';
+            
+            // For the movie list page
+            if (movieList) {
+                movieList.innerHTML = '<div class="loading">Loading movies...</div>';
+            }
+            
+            fetch(`${API_BASE_URL}/movies`)
+                .then(response => response.json())
+                .then(data => {
+                    // Update movie select dropdown
+                    movieSelect.innerHTML = '<option value="">-- Select a movie --</option>';
+                    
+                    // Update movie list if on movies page
+                    if (movieList) {
+                        if (data.length === 0) {
+                            movieList.innerHTML = '<div class="message">No movies available.</div>';
+                        } else {
+                            movieList.innerHTML = '';
+                        }
+                    }
+                    
+                    data.forEach(movie => {
+                        // Add to select dropdown
+                        const option = document.createElement('option');
+                        option.value = movie.id;
+                        option.textContent = `${movie.title} (${movie.duration} mins)`;
+                        movieSelect.appendChild(option);
+                        
+                        // Add to movie list if on movies page
+                        if (movieList) {
+                            const movieCard = document.createElement('div');
+                            movieCard.className = 'movie-card';
+                            
+                            const releaseDate = movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString() : 'N/A';
+                            
+                            movieCard.innerHTML = `
+                                <div class="movie-title">${movie.title}</div>
+                                <div class="movie-info"><span>Genre:</span> ${movie.genre || 'N/A'}</div>
+                                <div class="movie-info"><span>Duration:</span> ${movie.duration} mins</div>
+                                <div class="movie-info"><span>Language:</span> ${movie.language || 'N/A'}</div>
+                                <div class="movie-info"><span>Release Date:</span> ${releaseDate}</div>
+                                <div class="movie-info"><span>Rating:</span> ${movie.rating || 'N/A'}</div>
+                            `;
+                            
+                            movieList.appendChild(movieCard);
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading movies:', error);
+                    if (movieList) {
+                        movieList.innerHTML = '<div class="message">Error loading movies. Please try again.</div>';
+                    }
+                    addShowtimeError.textContent = 'Error loading movies. Please refresh the page.';
+                    addShowtimeError.style.display = 'block';
+                });
+        }
+        
+        // Load theater showtimes
+        function loadTheaterShowtimes() {
+            showtimeList.innerHTML = '<div class="loading">Loading showtimes...</div>';
+            
+            fetch(`${API_BASE_URL}/showtimes/theater/${currentUser.id}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.length === 0) {
+                        showtimeList.innerHTML = '<div class="message">You have no showtimes scheduled.</div>';
+                        return;
+                    }
+                    
+                    showtimeList.innerHTML = '';
+                    
+                    data.forEach(showtime => {
+                        const showtimeItem = document.createElement('div');
+                        showtimeItem.className = 'showtime-item';
+                        
+                        const startTime = new Date(showtime.startTime);
+                        const endTime = new Date(showtime.endTime);
+                        
+                        showtimeItem.innerHTML = `
+                            <div class="showtime-header">
+                                <div class="showtime-movie">${showtime.movie.title}</div>
+                                <div class="showtime-id">ID: ${showtime.id}</div>
+                            </div>
+                            <div class="showtime-details">
+                                <div class="showtime-detail">
+                                    <span>Date:</span> ${startTime.toLocaleDateString()}
+                                </div>
+                                <div class="showtime-detail">
+                                    <span>Time:</span> ${startTime.toLocaleTimeString()} - ${endTime.toLocaleTimeString()}
+                                </div>
+                                <div class="showtime-detail">
+                                    <span>Duration:</span> ${showtime.movie.duration} mins
+                                </div>
+                            </div>
+                            <div class="showtime-bookings">
+                                <button class="btn view-bookings-btn" data-id="${showtime.id}">
+                                    View Bookings
+                                </button>
+                            </div>
+                        `;
+                        
+                        showtimeList.appendChild(showtimeItem);
+                    });
+                    
+                    // Add event listeners to view bookings buttons
+                    document.querySelectorAll('.view-bookings-btn').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            const showtimeId = btn.getAttribute('data-id');
+                            loadBookingsForShowtime(showtimeId, btn.parentElement);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error loading showtimes:', error);
+                    showtimeList.innerHTML = '<div class="message">Error loading showtimes. Please try again.</div>';
+                });
+        }
+        
+        // Load bookings for a specific showtime
+        function loadBookingsForShowtime(showtimeId, container) {
+            // Clear previous bookings
+            const existingBookingList = container.querySelector('.booking-list');
+            if (existingBookingList) {
+                existingBookingList.remove();
+            }
+            
+            // Show loading indicator
+            container.innerHTML = '<div class="loading">Loading bookings...</div>';
+            
+            fetch(`${API_BASE_URL}/bookings/showtime/${showtimeId}`)
+                .then(response => response.json())
+                .then(data => {
+                    // Clear loading indicator
+                    container.innerHTML = '';
+                    
+                    if (data.length === 0) {
+                        container.innerHTML = '<div class="message">No bookings for this showtime.</div>';
+                        return;
+                    }
+                    
+                    const bookingCountDiv = document.createElement('div');
+                    bookingCountDiv.className = 'booking-count';
+                    bookingCountDiv.textContent = `Total Bookings: ${data.length}`;
+                    container.appendChild(bookingCountDiv);
+                    
+                    const bookingList = document.createElement('div');
+                    bookingList.className = 'booking-list';
+                    
+                    data.forEach(booking => {
+                        const bookingItem = document.createElement('div');
+                        bookingItem.className = 'booking-item';
+                        
+                        const bookingDate = new Date(booking.bookingDate);
+                        
+                        bookingItem.innerHTML = `
+                            <div class="booking-details">
+                                <h4>Booking ID: ${booking.id}</h4>
+                                <p>User: ${booking.user.name}</p>
+                                <p>Email: ${booking.user.email}</p>
+                                <p>Phone: ${booking.user.phone || 'N/A'}</p>
+                                <p>Booked on: ${bookingDate.toLocaleString()}</p>
+                            </div>
+                        `;
+                        
+                        bookingList.appendChild(bookingItem);
+                    });
+                    
+                    container.appendChild(bookingList);
+                })
+                .catch(error => {
+                    console.error('Error loading bookings:', error);
+                    container.innerHTML = '<div class="message">Error loading bookings. Please try again.</div>';
+                });
+        }
+        
+        // Add showtime form submission
+        addShowtimeForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            // Clear previous error messages
+            addShowtimeError.style.display = 'none';
+            
+            const movieId = movieSelect.value;
+            const startTime = startTimeInput.value;
+            const endTime = endTimeInput.value;
+            
+            // Validate form
+            if (!movieId) {
+                addShowtimeError.textContent = 'Please select a movie.';
+                addShowtimeError.style.display = 'block';
+                return;
+            }
+            
+            if (!startTime || !endTime) {
+                addShowtimeError.textContent = 'Please specify both start and end times.';
+                addShowtimeError.style.display = 'block';
+                return;
+            }
+            
+            const startDateTime = new Date(startTime);
+            const endDateTime = new Date(endTime);
+            
+            if (endDateTime <= startDateTime) {
+                addShowtimeError.textContent = 'End time must be after start time.';
+                addShowtimeError.style.display = 'block';
+                return;
+            }
+            
+            // Create showtime
+            fetch(`${API_BASE_URL}/showtimes`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    theaterId: currentUser.id,
+                    movieId: movieId,
+                    startTime: startTime,
+                    endTime: endTime
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Showtime added successfully!');
+                    
+                    // Reset form
+                    addShowtimeForm.reset();
+                    
+                    // Reload theater showtimes
+                    loadTheaterShowtimes();
+                } else {
+                    addShowtimeError.textContent = data.message || 'Failed to add showtime.';
+                    addShowtimeError.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error adding showtime:', error);
+                addShowtimeError.textContent = 'An error occurred. Please try again.';
+                addShowtimeError.style.display = 'block';
+            });
+        });
+        
+        // Load initial data
+        loadMovies();
+    </script>
+</body>
+</html>

@@ -1,4 +1,5 @@
 com/movievault/model/ShowTime.class
+com/movievault/controller/MovieController.class
 com/movievault/model/User.class
 com/movievault/controller/TheaterController.class
 com/movievault/model/Booking.class
@@ -6,6 +7,7 @@ com/movievault/controller/BookingController.class
 com/movievault/controller/UserController.class
 com/movievault/repository/MovieRepository.class
 com/movievault/repository/UserRepository.class
+com/movievault/config/CorsConfig.class
 com/movievault/controller/ShowTimeController.class
 com/movievault/MovieVaultApplication.class
 com/movievault/repository/ShowTimeRepository.class
