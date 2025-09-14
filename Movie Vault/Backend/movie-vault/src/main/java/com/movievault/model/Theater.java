@@ -19,11 +19,10 @@ public class Theater {
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     
-    // Default constructor
     public Theater() {
     }
     
-    // Constructor with fields
+   
     public Theater(String name, String city, String password) {
         this.name = name;
         this.city = city;

@@ -1,12 +1,19 @@
 package com.movievault.controller;
 
 import com.movievault.model.ShowTime;
+import com.movievault.model.Movie;
+import com.movievault.model.Theater;
 import com.movievault.repository.ShowTimeRepository;
+import com.movievault.repository.MovieRepository;
+import com.movievault.repository.TheaterRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +25,12 @@ public class ShowTimeController {
     
     @Autowired
     private ShowTimeRepository showTimeRepository;
+    
+    @Autowired
+    private MovieRepository movieRepository;
+    
+    @Autowired
+    private TheaterRepository theaterRepository;
     
     // Get all showtimes
     @GetMapping
@@ -66,8 +79,43 @@ public class ShowTimeController {
     
     // Add a new showtime
     @PostMapping
-    public ResponseEntity<?> addShowTime(@RequestBody ShowTime showTime) {
+    public ResponseEntity<?> addShowTime(@RequestBody Map<String, Object> request) {
         try {
+            // Extract data from request
+            Long movieId = Long.valueOf(request.get("movieId").toString());
+            Long theaterId = Long.valueOf(request.get("theaterId").toString());
+            String startTimeStr = request.get("startTime").toString();
+            String endTimeStr = request.get("endTime").toString();
+            
+            // Parse the datetime strings
+            LocalDateTime startTime = LocalDateTime.parse(startTimeStr);
+            LocalDateTime endTime = LocalDateTime.parse(endTimeStr);
+            
+            // Fetch Movie and Theater entities
+            Optional<Movie> movieOpt = movieRepository.findById(movieId);
+            Optional<Theater> theaterOpt = theaterRepository.findById(theaterId);
+            
+            if (!movieOpt.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Movie not found with id " + movieId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            if (!theaterOpt.isPresent()) {
+                Map<String, Object> response = new HashMap<>();
+                response.put("success", false);
+                response.put("message", "Theater not found with id " + theaterId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
+            }
+            
+            // Create ShowTime object
+            ShowTime showTime = new ShowTime();
+            showTime.setMovie(movieOpt.get());
+            showTime.setTheater(theaterOpt.get());
+            showTime.setStartTime(Date.from(startTime.atZone(ZoneId.systemDefault()).toInstant()));
+            showTime.setEndTime(Date.from(endTime.atZone(ZoneId.systemDefault()).toInstant()));
+            
             ShowTime savedShowTime = showTimeRepository.save(showTime);
             
             Map<String, Object> response = new HashMap<>();

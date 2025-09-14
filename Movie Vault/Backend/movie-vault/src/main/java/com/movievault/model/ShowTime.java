@@ -76,8 +76,7 @@ public class ShowTime {
         this.theater = theater;
     }
     
-    // Helper method to get available seats (dummy method to maintain compatibility)
     public Integer getAvailableSeats() {
-        return 100; // Default value
+        return 100;
     }
 }

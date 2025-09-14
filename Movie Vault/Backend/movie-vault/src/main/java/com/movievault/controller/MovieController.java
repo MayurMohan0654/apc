@@ -137,4 +137,23 @@ public class MovieController {
                 .filter(movie -> movie.getTitle().toLowerCase().contains(title.toLowerCase()))
                 .toList();
     }
+    
+    // Check if movie exists by exact title match
+    @GetMapping("/exists")
+    public ResponseEntity<?> checkMovieExists(@RequestParam String title) {
+        List<Movie> allMovies = movieRepository.findAll();
+        Optional<Movie> existingMovie = allMovies.stream()
+                .filter(movie -> movie.getTitle().toLowerCase().trim().equals(title.toLowerCase().trim()))
+                .findFirst();
+        
+        Map<String, Object> response = new HashMap<>();
+        if (existingMovie.isPresent()) {
+            response.put("exists", true);
+            response.put("movie", existingMovie.get());
+        } else {
+            response.put("exists", false);
+        }
+        
+        return ResponseEntity.ok(response);
+    }
 }

@@ -19,7 +19,7 @@ public class TheaterController {
     @Autowired
     private TheaterRepository theaterRepository;
     
-    // Get all theaters
+    
     @GetMapping
     public List<Theater> getAllTheaters() {
         return theaterRepository.findAll();

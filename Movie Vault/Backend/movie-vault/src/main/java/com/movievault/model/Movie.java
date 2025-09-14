@@ -11,7 +11,7 @@ public class Movie {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String title;
     
     private String genre;
@@ -29,12 +29,13 @@ public class Movie {
     @Column(columnDefinition = "TEXT")
     private String description;
     
-    // Default constructor
+    private String imageUrl; // Store TMDB poster URL
+    
     public Movie() {
     }
     
-    // Constructor with fields
-    public Movie(String title, String genre, Integer duration, String language, Date releaseDate, Double rating, String description) {
+
+    public Movie(String title, String genre, Integer duration, String language, Date releaseDate, Double rating, String description, String imageUrl) {
         this.title = title;
         this.genre = genre;
         this.duration = duration;
@@ -42,9 +43,9 @@ public class Movie {
         this.releaseDate = releaseDate;
         this.rating = rating;
         this.description = description;
+        this.imageUrl = imageUrl;
     }
     
-    // Getters and Setters
     public Long getId() {
         return id;
     }
@@ -109,6 +110,14 @@ public class Movie {
         this.description = description;
     }
     
+    public String getImageUrl() {
+        return imageUrl;
+    }
+    
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+    
     @Override
     public String toString() {
         return "Movie{" +
@@ -119,6 +128,7 @@ public class Movie {
                 ", language= " + language  +
                 ", releaseDate= " + releaseDate +
                 ", rating= " + rating + 
+                ", imageUrl= " + imageUrl + 
                 '}';
     }
 }
