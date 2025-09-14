@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movies - Movie Vault</title>
+    <link rel="stylesheet" href="./css/movies.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">Movie<span>Vault</span></a>
+            
+            <nav>
+                <ul class="nav-links">
+                    <li><a href="movies.html" class="active">Movies</a></li>
+                </ul>
+            </nav>
+            
+            <div class="auth-links" id="auth-links">
+                <a href="index.html">Login</a>
+                <a href="index.html" class="btn">Register</a>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="page-header">
+            <h1>Explore Movies</h1>
+            <p>Discover the latest blockbusters and timeless classics</p>
+        </div>
+        
+        <div class="filters">
+            <div class="filter-grid">
+                <div class="filter-group">
+                    <label for="genre-filter">Genre</label>
+                    <select id="genre-filter">
+                        <option value="">All Genres</option>
+                        <!-- Genres will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="language-filter">Language</label>
+                    <select id="language-filter">
+                        <option value="">All Languages</option>
+                        <!-- Languages will be populated dynamically -->
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="rating-filter">Minimum Rating</label>
+                    <select id="rating-filter">
+                        <option value="">Any Rating</option>
+                        <option value="9">9+ Stars</option>
+                        <option value="8">8+ Stars</option>
+                        <option value="7">7+ Stars</option>
+                        <option value="6">6+ Stars</option>
+                        <option value="5">5+ Stars</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        
+        <div id="movie-grid" class="movie-grid">
+            <div class="loading">Loading movies...</div>
+            <!-- Movies will be populated dynamically -->
+        </div>
+    </div>
+    
+    <script src="js/utils.js"></script>
+    <script>
+        // DOM elements
+        const movieGrid = document.getElementById('movie-grid');
+        const genreFilter = document.getElementById('genre-filter');
+        const languageFilter = document.getElementById('language-filter');
+        const ratingFilter = document.getElementById('rating-filter');
+        const authLinks = document.getElementById('auth-links');
+        
+        // Check if user is logged in and update UI accordingly
+        function updateAuthUI() {
+            const currentUser = localStorage.getItem('currentUser');
+            const userType = localStorage.getItem('userType');
+            
+            if (currentUser && userType) {
+                authLinks.innerHTML = '';
+                
+                if (userType === 'user') {
+                    authLinks.innerHTML = `
+                        <a href="user-dashboard.html">Dashboard</a>
+                        <a href="#" id="logout-btn" class="btn">Logout</a>
+                    `;
+                } else if (userType === 'theater') {
+                    authLinks.innerHTML = `
+                        <a href="theater-dashboard.html">Dashboard</a>
+                        <a href="#" id="logout-btn" class="btn">Logout</a>
+                    `;
+                }
+                
+                // Add logout event listener
+                const logoutBtn = document.getElementById('logout-btn');
+                if (logoutBtn) {
+                    logoutBtn.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        localStorage.removeItem('currentUser');
+                        localStorage.removeItem('userType');
+                        window.location.reload();
+                    });
+                }
+            }
+        }
+        
+        // Load movies
+        async function loadMovies() {
+            movieGrid.innerHTML = '<div class="loading">Loading movies...</div>';
+            
+            try {
+                const response = await fetch(`/api/movies`);
+                const data = await response.json();
+                
+                if (data.length === 0) {
+                    movieGrid.innerHTML = '<div class="message">No movies available.</div>';
+                    return;
+                }
+                
+                // Populate filter options
+                const genres = [...new Set(data.filter(movie => movie.genre).map(movie => movie.genre))];
+                genreFilter.innerHTML = '<option value="">All Genres</option>';
+                genres.forEach(genre => {
+                    const option = document.createElement('option');
+                    option.value = genre;
+                    option.textContent = genre;
+                    genreFilter.appendChild(option);
+                });
+                
+                const languages = [...new Set(data.filter(movie => movie.language).map(movie => movie.language))];
+                languageFilter.innerHTML = '<option value="">All Languages</option>';
+                languages.forEach(language => {
+                    const option = document.createElement('option');
+                    option.value = language;
+                    option.textContent = language;
+                    languageFilter.appendChild(option);
+                });
+                
+                renderMovies(data);
+            } catch (error) {
+                console.error('Error loading movies:', error);
+                movieGrid.innerHTML = '<div class="message">Error loading movies. Please try again.</div>';
+            }
+        }
+        
+        // Render movies
+        function renderMovies(movies) {
+            const genreValue = genreFilter.value;
+            const languageValue = languageFilter.value;
+            const ratingValue = ratingFilter.value;
+            
+            // Apply filters
+            let filteredMovies = movies;
+            
+            if (genreValue) {
+                filteredMovies = filteredMovies.filter(movie => movie.genre === genreValue);
+            }
+            
+            if (languageValue) {
+                filteredMovies = filteredMovies.filter(movie => movie.language === languageValue);
+            }
+            
+            if (ratingValue) {
+                filteredMovies = filteredMovies.filter(movie => movie.rating >= parseFloat(ratingValue));
+            }
+            
+            if (filteredMovies.length === 0) {
+                movieGrid.innerHTML = '<div class="message">No movies match your criteria.</div>';
+                return;
+            }
+            
+            movieGrid.innerHTML = '';
+            
+            filteredMovies.forEach(movie => {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'movie-card';
+                
+                const releaseDate = movie.releaseDate ? new Date(movie.releaseDate).toLocaleDateString() : 'N/A';
+                
+                movieCard.innerHTML = `
+                    <div class="movie-poster">
+                        ${movie.imageUrl ? 
+                            `<img src="${movie.imageUrl}" alt="${movie.title}" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">` :
+                            ''
+                        }
+                        <div class="poster-placeholder" style="display: ${movie.imageUrl ? 'none' : 'flex'}; width: 100%; height: 450px; background: linear-gradient(135deg, #FF9800, #f57c00); color: white; justify-content: center; align-items: center; text-align: center; font-weight: bold; font-size: 18px; padding: 20px; box-sizing: border-box;">
+                            ${movie.title}
+                        </div>
+                        ${movie.rating ? `<div class="movie-rating">${movie.rating}/10</div>` : ''}
+                    </div>
+                    <div class="movie-info">
+                        <div class="movie-title">${movie.title}</div>
+                        <div class="movie-details">
+                            <div class="movie-detail">
+                                <div class="movie-detail-label">Genre:</div>
+                                <div class="movie-detail-value">${movie.genre || 'N/A'}</div>
+                            </div>
+                            <div class="movie-detail">
+                                <div class="movie-detail-label">Duration:</div>
+                                <div class="movie-detail-value">${movie.duration} mins</div>
+                            </div>
+                            <div class="movie-detail">
+                                <div class="movie-detail-label">Language:</div>
+                                <div class="movie-detail-value">${movie.language || 'N/A'}</div>
+                            </div>
+                            <div class="movie-detail">
+                                <div class="movie-detail-label">Released:</div>
+                                <div class="movie-detail-value">${releaseDate}</div>
+                            </div>
+                        </div>
+                        <div class="movie-actions">
+                            <a href="user-dashboard.html" class="btn">View Showtimes</a>
+                        </div>
+                    </div>
+                `;
+                
+                movieGrid.appendChild(movieCard);
+            });
+        }
+        
+        // Filter event handlers
+        genreFilter.addEventListener('change', () => {
+            loadMovies();
+        });
+        
+        languageFilter.addEventListener('change', () => {
+            loadMovies();
+        });
+        
+        ratingFilter.addEventListener('change', () => {
+            loadMovies();
+        });
+        
+        // Initialize
+        updateAuthUI();
+        loadMovies();
+    </script>
+</body>
+</html>

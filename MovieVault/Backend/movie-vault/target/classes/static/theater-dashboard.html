@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Theater Dashboard - Movie Vault</title>
+    <link rel="stylesheet" href="./css/theater-dash.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">Movie<span>Vault</span></a>
+            <div class="theater-info">
+                <span id="theater-name">Theater Name</span>
+                <button id="logout-btn" class="btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>Management</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="#" class="active" data-page="add-showtime">Add Showtime</a></li>
+                    <li><a href="#" data-page="my-showtimes">My Showtimes</a></li>
+                    <li><a href="#" data-page="movies">Movies</a></li>
+                </ul>
+            </div>
+            
+            <div class="main-content">
+                <!-- Add Showtime Page -->
+                <div class="content-page active" id="add-showtime-page">
+                    <div class="page-title"><h2>Add New Showtime</h2></div>
+                    <div class="card">
+                        <div class="card-header"><h3>Showtime Details</h3></div>
+                        <form id="add-showtime-form">
+                            <div class="form-group">
+                                <label for="movie-select">Select Movie</label>
+                                <select id="movie-select" required>
+                                    <option value="">-- Select a movie --</option>
+                                </select>
+                            </div>
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="start-time">Start Time</label>
+                                    <input type="datetime-local" id="start-time" required>
+                                </div>
+                                <div class="form-group">
+                                    <label for="end-time">End Time</label>
+                                    <input type="datetime-local" id="end-time" required>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn">Add Showtime</button>
+                            <div class="error-message" id="add-showtime-error"></div>
+                        </form>
+                    </div>
+                </div>
+                
+                <!-- My Showtimes Page -->
+                <div class="content-page" id="my-showtimes-page" style="display: none;">
+                    <div class="page-title"><h2>My Showtimes</h2></div>
+                    <div class="card">
+                        <div class="card-header"><h3>Scheduled Showtimes</h3></div>
+                        <div id="showtime-list" class="showtime-list">
+                            <div class="loading">Loading showtimes...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Movies Page -->
+                <div class="content-page" id="movies-page" style="display: none;">
+                    <div class="page-title"><h2>Available Movies</h2></div>
+                    <div class="search-section">
+                        <div class="search-container">
+                            <input type="text" id="movie-search" placeholder="Search movies..." class="search-input">
+                            <button id="search-btn" class="btn search-btn">🔍 Search</button>
+                            <button id="clear-search-btn" class="btn clear-btn">Clear</button>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Movie Catalog</h3>
+                            <div class="movie-count"><span id="movie-count-text">0 movies found</span></div>
+                        </div>
+                        <div id="movie-list" class="movie-list">
+                            <div class="loading">Loading movies...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        
+        const API = '/api', user = JSON.parse(localStorage.getItem('currentUser') || '{}'), type = localStorage.getItem('userType');
+        if (!user || type !== 'theater') window.location.href = 'index.html';
+        
+        const $ = id => document.getElementById(id), $$ = sel => document.querySelectorAll(sel);
+        const api = async (url, opt = {}) => { try { const r = await fetch(API + url, opt); return r.ok ? await r.json() : null; } catch (e) { console.error(e); return null; } };
+        const poster = (m, s = {w: 300, h: 450}) => {
+            if (m.poster_path) {
+                return `<img src="https://image.tmdb.org/t/p/w300${m.poster_path}" alt="${m.title}" style="width:${s.w}px;height:${s.h}px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div style="display:none;width:${s.w}px;height:${s.h}px;background:linear-gradient(135deg,#FF9800,#f57c00);color:white;justify-content:center;align-items:center;text-align:center;font-weight:bold;font-size:${s.w < 100 ? '10px' : '18px'};padding:20px;box-sizing:border-box;border-radius:8px;">${m.title.substring(0, s.w < 100 ? 3 : m.title.length)}</div>`;
+            } else if (m.imageUrl) {
+                return `<img src="${m.imageUrl}" alt="${m.title}" style="width:${s.w}px;height:${s.h}px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div style="display:none;width:${s.w}px;height:${s.h}px;background:linear-gradient(135deg,#FF9800,#f57c00);color:white;justify-content:center;align-items:center;text-align:center;font-weight:bold;font-size:${s.w < 100 ? '10px' : '18px'};padding:20px;box-sizing:border-box;border-radius:8px;">${m.title.substring(0, s.w < 100 ? 3 : m.title.length)}</div>`;
+            }
+            return '';
+        };
+        const placeholder = (t, s = {w: 300, h: 450}) => `<div style="display:flex;width:${s.w}px;height:${s.h}px;background:linear-gradient(135deg,#FF9800,#f57c00);color:white;justify-content:center;align-items:center;text-align:center;font-weight:bold;font-size:${s.w < 100 ? '10px' : '18px'};padding:20px;box-sizing:border-box;border-radius:8px;">${t.substring(0, s.w < 100 ? 3 : t.length)}</div>`;
+        const showErr = msg => { $('add-showtime-error').textContent = msg; $('add-showtime-error').style.display = 'block'; };
+        const hideErr = () => $('add-showtime-error').style.display = 'none';
+        
+        // DOM Elements & Data
+        let movies = [], showtimes = [];
+        const els = { name: $('theater-name'), logout: $('logout-btn'), links: $$('.sidebar-menu a'), pages: $$('.content-page'), 
+                     movieSel: $('movie-select'), start: $('start-time'), end: $('end-time'), sList: $('showtime-list'), 
+                     mList: $('movie-list'), search: $('movie-search'), searchBtn: $('search-btn'), clear: $('clear-search-btn'), 
+                     count: $('movie-count-text'), form: $('add-showtime-form') };
+        
+
+        els.name.textContent = user.name;
+        els.logout.onclick = () => { localStorage.clear(); window.location.href = 'index.html'; };
+        
+        els.links.forEach(link => {
+            link.onclick = e => {
+                e.preventDefault();
+                els.links.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                const pageId = link.dataset.page + '-page';
+                els.pages.forEach(p => p.style.display = p.id === pageId ? 'block' : 'none');
+                
+                if (pageId === 'add-showtime-page') {
+                    loadMovies();
+                } else if (pageId === 'my-showtimes-page') {
+                    loadShowtimes();
+                } else if (pageId === 'movies-page') {
+                    loadExternal('avengers');
+                    setTimeout(() => els.search.focus(), 100);
+                }
+            };
+        });
+        
+        // Search
+        const search = () => { 
+            const q = els.search.value.trim() || 'popular'; 
+            console.log('Searching for:', q);
+            loadExternal(q); 
+        };
+        els.searchBtn.onclick = search;
+        els.clear.onclick = () => { 
+            els.search.value = ''; 
+            loadExternal('avengers'); 
+        };
+        els.search.oninput = () => { 
+            if (els.search.value.length > 2) {
+                clearTimeout(window.searchTimeout);
+                window.searchTimeout = setTimeout(search, 500);
+            }
+        };
+        els.search.onkeypress = e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                search();
+            }
+        };
+        
+     
+        const loadMovies = async () => {
+            hideErr();
+            const data = await api('/movies');
+            if (data) {
+                els.movieSel.innerHTML = '<option value="">-- Select a movie --</option>' + 
+                    data.map(m => `<option value="${m.id}">${m.title} (${m.duration} mins)</option>`).join('');
+            } else showErr('Error loading movies');
+        };
+        
+        const loadExternal = async (query = 'avengers') => {
+            els.mList.innerHTML = '<div class="loading">Loading...</div>';
+            const data = await api(`/allMovies?query=${encodeURIComponent(query)}`);
+            
+            if (!data?.length) {
+                els.mList.innerHTML = '<div class="message">No movies found.</div>';
+                els.count.textContent = '0 movies found';
+                return;
+            }
+            
+            movies = data;
+            els.count.textContent = `${data.length} movies found`;
+            els.mList.innerHTML = data.map((m, i) => {
+                const img = m.poster_path ? poster(m) : placeholder(m.title);
+                const desc = m.overview?.length > 100 ? m.overview.substring(0, 100) + '...' : m.overview || '';
+                
+                return `<div class="movie-card">
+                    <div class="movie-poster">${img}<div class="movie-rating-badge">${m.vote_average?.toFixed(1) || 'N/A'}</div></div>
+                    <div class="movie-details">
+                        <h3>${m.title}</h3>
+                        <div class="movie-meta">
+                            <div class="movie-info"><span>Lang:</span><span>${m.original_language?.toUpperCase() || 'N/A'}</span></div>
+                            <div class="movie-info"><span>Release:</span><span>${m.release_date ? new Date(m.release_date).toLocaleDateString() : 'N/A'}</span></div>
+                            <div class="movie-info"><span>Rating:</span><span>${m.vote_average?.toFixed(1) || 'N/A'}</span></div>
+                        </div>
+                        ${desc ? `<div class="movie-description">${desc}</div>` : ''}
+                        <button class="btn btn-primary" onclick="quickAdd(${i})">Quick Add</button>
+                    </div>
+                </div>`;
+            }).join('');
+        };
+        
+        const loadShowtimes = async () => {
+            els.sList.innerHTML = '<div class="loading">Loading...</div>';
+            const data = await api(`/showtimes/theater/${user.id}`);
+            if (!data?.length) {
+                els.sList.innerHTML = '<div class="message">No showtimes scheduled.</div>';
+                return;
+            }
+            els.sList.innerHTML = data.map(s => {
+                const start = new Date(s.startTime), end = new Date(s.endTime);
+                const hasImage = s.movie.imageUrl;
+                
+                return `
+                    <div class="showtime-item">
+                        <div class="showtime-header" style="display:flex;justify-content:space-between;align-items:center;">
+                            <div style="display:flex;align-items:center;gap:15px;">
+                                <div style="position:relative;flex-shrink:0;">
+                                    ${hasImage ? 
+                                        `<img src="${s.movie.imageUrl}" alt="${s.movie.title}" style="width:50px;height:75px;object-fit:cover;border-radius:8px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';"><div style="display:none;width:50px;height:75px;background:linear-gradient(135deg,#FF9800,#f57c00);color:white;justify-content:center;align-items:center;text-align:center;font-weight:bold;font-size:10px;padding:5px;box-sizing:border-box;border-radius:8px;">${s.movie.title.substring(0, 3)}</div>` :
+                                        `<div style="width:50px;height:75px;background:linear-gradient(135deg,#FF9800,#f57c00);color:white;display:flex;justify-content:center;align-items:center;text-align:center;font-weight:bold;font-size:10px;padding:5px;box-sizing:border-box;border-radius:8px;">${s.movie.title.substring(0, 3)}</div>`
+                                    }
+                                </div>
+                                <div style="font-weight:bold;color:#fff;">${s.movie.title}</div>
+                            </div>
+                            <div style="font-size:12px;color:#666;">ID: ${s.id}</div>
+                        </div>
+                        <div class="showtime-details">
+                            <div><span>Date:</span> ${start.toLocaleDateString()}</div>
+                            <div><span>Time:</span> ${start.toLocaleTimeString()} - ${end.toLocaleTimeString()}</div>
+                            <div><span>Duration:</span> ${s.movie.duration} mins</div>
+                        </div>
+                        <button class="btn" onclick="loadBookings('${s.id}', this)">View Bookings</button>
+                    </div>`;
+            }).join('');
+        };
+        
+        const quickAdd = async (i) => {
+            const m = movies[i];
+            const exists = await api(`/movies/exists?title=${encodeURIComponent(m.title)}`);
+            if (!exists?.exists) {
+                await api('/movies', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        title: m.title, genre: 'Action', duration: 120, language: m.original_language || 'en', 
+                        releaseDate: m.release_date, rating: m.vote_average || 0, description: m.overview || '', 
+                        imageUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null 
+                    }) 
+                });
+            }
+            els.links[0].click();
+            await loadMovies();
+            setTimeout(() => {
+                const opt = Array.from(els.movieSel.options).find(o => o.textContent.toLowerCase().includes(m.title.toLowerCase()));
+                if (opt) els.movieSel.value = opt.value;
+            }, 100);
+            alert(`${m.title} selected!`);
+        };
+        
+        const loadBookings = async (id, btn) => {
+            const container = btn.parentElement;
+            const existing = container.querySelector('.booking-list');
+            if (existing) { existing.remove(); return; }
+            
+            container.insertAdjacentHTML('beforeend', '<div class="loading">Loading bookings...</div>');
+            const data = await api(`/bookings/showtime/${id}`);
+            container.querySelector('.loading').remove();
+            
+            if (!data?.length) {
+                container.insertAdjacentHTML('beforeend', '<div class="message">No bookings.</div>');
+                return;
+            }
+            
+            const bookingHtml = `<div class="booking-list"><div class="booking-count">Total: ${data.length}</div>` +
+                data.map(b => `<div class="booking-item"><h4>ID: ${b.id}</h4><p>User: ${b.user.name}</p><p>Email: ${b.user.email}</p><p>Booked: ${new Date(b.bookingDate).toLocaleString()}</p></div>`).join('') + '</div>';
+            container.insertAdjacentHTML('beforeend', bookingHtml);
+        };
+
+        els.form.onsubmit = async e => {
+            e.preventDefault();
+            hideErr();
+            const mid = els.movieSel.value, start = els.start.value, end = els.end.value;
+            if (!mid) return showErr('Select a movie');
+            if (!start || !end) return showErr('Set start and end times');
+            if (new Date(end) <= new Date(start)) return showErr('End time must be after start');
+            
+            const result = await api('/showtimes', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ theaterId: user.id, movieId: mid, startTime: start, endTime: end })
+            });
+            
+            if (result?.success) { alert('Showtime added!'); els.form.reset(); loadShowtimes(); }
+            else showErr(result?.message || 'Failed to add showtime');
+        };
+        
+        // Initialize
+        loadMovies("avengers");
+    </script>
+</body>
+</html>

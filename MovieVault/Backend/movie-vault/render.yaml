@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: movie-vault
+    env: java
+    buildCommand: ./mvnw clean package -DskipTests
+    startCommand: java -jar target/movie-vault-1.0-SNAPSHOT.jar
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: prod
+      - key: PORT
+        value: 8080
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRATION
+        value: 86400000
+     
+      - key: DATABASE_URL
+        value: jdbc:mysql://db4free.net:3306/movie_vault?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - key: DB_USERNAME
+        value: nishan2024
+      - key: DB_PASSWORD
+        value: nishan137
+      - key: ALLOWED_ORIGINS
+        value: https://movie-vault.onrender.com,http://localhost:8080
+
+# No local database needed - using external MySQL hosting

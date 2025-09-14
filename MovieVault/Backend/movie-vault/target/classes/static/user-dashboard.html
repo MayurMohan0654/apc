@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Dashboard - Movie Vault</title>
+    <link rel="stylesheet" href="./css/user-dash.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">Movie<span>Vault</span></a>
+            <div class="user-info">
+                <span id="user-name">Welcome, User</span>
+                <button id="logout-btn" class="btn">Logout</button>
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="dashboard">
+            <div class="sidebar">
+                <h3>Navigation</h3>
+                <ul class="sidebar-menu">
+                    <li><a href="#" class="active" data-page="showtimes">Browse Showtimes</a></li>
+                    <li><a href="#" data-page="bookings">My Bookings</a></li>
+                </ul>
+            </div>
+            
+            <div class="main-content">
+                <!-- Browse Showtimes Page -->
+                <div class="content-page active" id="showtimes-page">
+                    <div class="page-title">
+                        <h2>Browse Showtimes</h2>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Filter Showtimes</h3>
+                        </div>
+                        <div class="filters">
+                            <div class="filter-group">
+                                <div class="filter-item">
+                                    <label for="movie-filter">Movie</label>
+                                    <select id="movie-filter">
+                                        <option value="">All Movies</option>
+                                    </select>
+                                </div>
+                                <div class="filter-item">
+                                    <label for="theater-filter">Theater</label>
+                                    <select id="theater-filter">
+                                        <option value="">All Theaters</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="filter-actions">
+                                <button onclick="applyFilters()" class="btn btn-filter">Apply Filters</button>
+                                <button onclick="clearFilters()" class="btn btn-clear">Clear All</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Available Showtimes</h3>
+                        </div>
+                        <div id="showtime-list" class="showtime-list">
+                            <div class="loading">Loading showtimes...</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- My Bookings Page -->
+                <div class="content-page" id="bookings-page" style="display: none;">
+                    <div class="page-title">
+                        <h2>My Bookings</h2>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Your Upcoming Shows</h3>
+                        </div>
+                        <div id="booking-list" class="booking-list">
+                            <div class="loading">Loading your bookings...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    
+        const API_BASE_URL = '/api';
+        const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const userType = localStorage.getItem('userType');
+        
+        if (!currentUser || userType !== 'user') {
+            window.location.href = 'index.html';
+        }
+        
+       
+        const $ = id => document.getElementById(id);
+        const $$ = selector => document.querySelectorAll(selector);
+        const formatTime = date => new Date(date).toLocaleTimeString();
+        const formatDate = date => new Date(date).toLocaleDateString();
+        
+        const createPoster = (imageUrl, title, size = {w: 60, h: 90}) => {
+            if (imageUrl) {
+                return `<img src="${imageUrl}" alt="${title}" style="width:${size.w}px;height:${size.h}px;object-fit:cover;border-radius:8px;margin-right:15px;" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                        <div style="display:none;width:${size.w}px;height:${size.h}px;background:linear-gradient(135deg,#FF9800,#f57c00);border-radius:8px;margin-right:15px;align-items:center;justify-content:center;font:bold 12px/1 Arial;color:white;">${title.substring(0,3)}</div>`;
+            } else {
+                return `<div style="width:${size.w}px;height:${size.h}px;background:linear-gradient(135deg,#FF9800,#f57c00);border-radius:8px;margin-right:15px;display:flex;align-items:center;justify-content:center;font:bold 12px/1 Arial;color:white;">${title.substring(0,3)}</div>`;
+            }
+        };
+        
+        const apiCall = async (endpoint, options = {}) => {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                return response.ok ? await response.json() : null;
+            } catch (error) {
+                console.error(`API Error ${endpoint}:`, error);
+                return null;
+            }
+        };
+        
+        const showMessage = (container, message) => {
+            container.innerHTML = `<div class="message">${message}</div>`;
+        };
+        
+        // DOM Elements
+        const elements = {
+            userName: $('user-name'),
+            logoutBtn: $('logout-btn'),
+            sidebarLinks: $$('.sidebar-menu a'),
+            contentPages: $$('.content-page'),
+            movieFilter: $('movie-filter'),
+            theaterFilter: $('theater-filter'),
+            showtimeList: $('showtime-list'),
+            bookingList: $('booking-list')
+        };
+        
+      
+        elements.userName.textContent = `Welcome, ${currentUser.name}`;
+        elements.logoutBtn.onclick = () => {
+            localStorage.clear();
+            window.location.href = 'index.html';
+        };
+        
+     
+        elements.sidebarLinks.forEach(link => {
+            link.onclick = (e) => {
+                e.preventDefault();
+                elements.sidebarLinks.forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                
+                const pageId = link.dataset.page + '-page';
+                elements.contentPages.forEach(page => {
+                    page.style.display = page.id === pageId ? 'block' : 'none';
+                });
+                
+                pageId === 'showtimes-page' ? loadShowtimes() : loadBookings();
+            };
+        });
+        
+     
+        let allShowtimes = [];
+
+    
+        const loadShowtimes = async () => {
+            elements.showtimeList.innerHTML = '<div class="loading">Loading...</div>';
+            
+            const [movies, theaters, showtimes] = await Promise.all([
+                apiCall('/movies'),
+                apiCall('/theaters'),
+                apiCall('/showtimes')
+            ]);
+            
+            allShowtimes = showtimes || [];
+            
+            if (movies) {
+                elements.movieFilter.innerHTML = '<option value="">All Movies</option>' + 
+                    movies.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
+            }
+            
+            if (theaters) {
+                elements.theaterFilter.innerHTML = '<option value="">All Theaters</option>' + 
+                    theaters.map(t => `<option value="${t.id}">${t.name}, ${t.city || 'N/A'}</option>`).join('');
+            }
+            
+            displayShowtimes(allShowtimes);
+        };
+        
+        // Display showtimes with filtering
+        const displayShowtimes = (showtimes) => {
+            if (!showtimes.length) {
+                return showMessage(elements.showtimeList, 'No showtimes available.');
+            }
+            
+            // Apply filters
+            const movieId = elements.movieFilter.value;
+            const theaterId = elements.theaterFilter.value;
+            
+            const filtered = showtimes.filter(s => 
+                s.movie && s.theater &&
+                (!movieId || s.movie.id == movieId) &&
+                (!theaterId || s.theater.id == theaterId)
+            );
+            
+            if (!filtered.length) {
+                return showMessage(elements.showtimeList, 'No showtimes match your criteria.');
+            }
+            
+            elements.showtimeList.innerHTML = filtered.map(s => {
+                const startTime = new Date(s.startTime);
+                const endTime = new Date(s.endTime);
+                
+                return `
+                    <div class="showtime-card">
+                        <div class="showtime-header">
+                            <div class="showtime-poster">
+                                ${createPoster(s.movie.imageUrl, s.movie.title)}
+                            </div>
+                            <div>
+                                <div class="showtime-movie">${s.movie.title}</div>
+                                <div class="showtime-theater">${s.theater.name}, ${s.theater.city || 'N/A'}</div>
+                            </div>
+                        </div>
+                        <div class="showtime-details">
+                            <div class="showtime-detail-item">
+                                <span>Date:</span> 
+                                <span>${formatDate(s.startTime)}</span>
+                            </div>
+                            <div class="showtime-detail-item">
+                                <span>Time:</span> 
+                                <span>${formatTime(s.startTime)} - ${formatTime(s.endTime)}</span>
+                            </div>
+                            <div class="showtime-detail-item">
+                                <span>Duration:</span> 
+                                <span>${s.movie.duration || 'N/A'} mins</span>
+                            </div>
+                            <div class="showtime-detail-item">
+                                <span>Rating:</span> 
+                                <span>${s.movie.rating || 'N/A'}/10</span>
+                            </div>
+                        </div>
+                        <div class="showtime-actions">
+                            <button onclick="bookShowtime('${s.id}','${s.movie.title}')" class="btn btn-primary">
+                                Book Now
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+        
+        const bookShowtime = async (showtimeId, movieTitle) => {
+            const result = await apiCall('/bookings', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: currentUser.id, showTimeId: showtimeId })
+            });
+            
+            alert(result?.success ? `Booking confirmed for ${movieTitle}!` : 'Booking failed. Please try again.');
+            if (result?.success) loadShowtimes();
+        };
+        
+        const loadBookings = async () => {
+            elements.bookingList.innerHTML = '<div class="loading">Loading...</div>';
+            
+            const bookings = await apiCall(`/bookings/user/${currentUser.id}`);
+            
+            if (!bookings?.length) {
+                return showMessage(elements.bookingList, 'You have no bookings yet.');
+            }
+            
+            elements.bookingList.innerHTML = bookings.map(b => {
+                const s = b.showTime;
+                return `
+                    <div class="booking-item">
+                        <div class="booking-details">
+                            <h4>Booking #${b.id}</h4>
+                            <p><strong>Movie:</strong> ${s.movie.title}</p>
+                            <p><strong>Theater:</strong> ${s.theater.name}, ${s.theater.city || 'N/A'}</p>
+                            <p><strong>Date:</strong> ${formatDate(s.startTime)}</p>
+                            <p><strong>Time:</strong> ${formatTime(s.startTime)} - ${formatTime(s.endTime)}</p>
+                            <p><strong>Booked on:</strong> ${formatDate(b.bookingDate)}</p>
+                        </div>
+                        <div class="booking-actions">
+                            <button onclick="cancelBooking('${b.id}')" class="btn btn-secondary">
+                                Cancel Booking
+                            </button>
+                        </div>
+                    </div>`;
+            }).join('');
+        };
+        
+        const cancelBooking = async (bookingId) => {
+            if (!confirm('Are you sure you want to cancel this booking?')) return;
+            
+            const result = await apiCall(`/bookings/${bookingId}`, { method: 'DELETE' });
+            alert(result?.success ? 'Booking cancelled successfully!' : 'Cancellation failed.');
+            if (result?.success) loadBookings();
+        };
+        
+        const applyFilters = () => {
+            displayShowtimes(allShowtimes);
+        };
+        
+        const clearFilters = () => {
+            elements.movieFilter.value = '';
+            elements.theaterFilter.value = '';
+            displayShowtimes(allShowtimes);
+        };
+        
+        elements.movieFilter.onchange = elements.theaterFilter.onchange = () => {
+            displayShowtimes(allShowtimes);
+        };
+        
+        // Initialize
+        loadShowtimes();
+    </script>
+</body>
+</html>
