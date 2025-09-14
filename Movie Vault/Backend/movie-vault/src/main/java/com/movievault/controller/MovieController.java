@@ -127,15 +127,12 @@ public class MovieController {
         }
     }
     
-    // Search movies by title (partial match)
+ 
     @GetMapping("/search")
     public List<Movie> searchMovies(@RequestParam String title) {
-        // This would need a custom method in the repository
-        // For now, we'll fetch all and filter manually
-        List<Movie> allMovies = movieRepository.findAll();
-        return allMovies.stream()
-                .filter(movie -> movie.getTitle().toLowerCase().contains(title.toLowerCase()))
-                .toList();
+
+        List<Movie> allMovies = movieRepository.findByTitleContainingIgnoreCase(title);
+        return allMovies;
     }
     
     // Check if movie exists by exact title match

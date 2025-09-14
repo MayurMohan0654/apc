@@ -90,17 +90,16 @@
     </div>
 
     <script>
-        // Configuration
+    
         const API_BASE_URL = '/api';
         const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
         const userType = localStorage.getItem('userType');
         
-        // Redirect if not logged in
         if (!currentUser || userType !== 'user') {
             window.location.href = 'index.html';
         }
         
-        // Utility functions
+       
         const $ = id => document.getElementById(id);
         const $$ = selector => document.querySelectorAll(selector);
         const formatTime = date => new Date(date).toLocaleTimeString();
@@ -141,14 +140,14 @@
             bookingList: $('booking-list')
         };
         
-        // Initialize user info
+      
         elements.userName.textContent = `Welcome, ${currentUser.name}`;
         elements.logoutBtn.onclick = () => {
             localStorage.clear();
             window.location.href = 'index.html';
         };
         
-        // Navigation handler
+     
         elements.sidebarLinks.forEach(link => {
             link.onclick = (e) => {
                 e.preventDefault();
@@ -164,7 +163,10 @@
             };
         });
         
-        // Load and display showtimes
+     
+        let allShowtimes = [];
+
+    
         const loadShowtimes = async () => {
             elements.showtimeList.innerHTML = '<div class="loading">Loading...</div>';
             
@@ -174,7 +176,8 @@
                 apiCall('/showtimes')
             ]);
             
-            // Populate filters
+            allShowtimes = showtimes || [];
+            
             if (movies) {
                 elements.movieFilter.innerHTML = '<option value="">All Movies</option>' + 
                     movies.map(m => `<option value="${m.id}">${m.title}</option>`).join('');
@@ -185,7 +188,7 @@
                     theaters.map(t => `<option value="${t.id}">${t.name}, ${t.city || 'N/A'}</option>`).join('');
             }
             
-            displayShowtimes(showtimes || []);
+            displayShowtimes(allShowtimes);
         };
         
         // Display showtimes with filtering
@@ -250,7 +253,6 @@
             }).join('');
         };
         
-        // Book showtime
         const bookShowtime = async (showtimeId, movieTitle) => {
             const result = await apiCall('/bookings', {
                 method: 'POST',
@@ -262,7 +264,6 @@
             if (result?.success) loadShowtimes();
         };
         
-        // Load and display bookings
         const loadBookings = async () => {
             elements.bookingList.innerHTML = '<div class="loading">Loading...</div>';
             
@@ -293,7 +294,6 @@
             }).join('');
         };
         
-        // Cancel booking
         const cancelBooking = async (bookingId) => {
             if (!confirm('Are you sure you want to cancel this booking?')) return;
             
@@ -302,26 +302,18 @@
             if (result?.success) loadBookings();
         };
         
-        // Filter handlers
         const applyFilters = () => {
-            if (window.allShowtimes) displayShowtimes(window.allShowtimes);
+            displayShowtimes(allShowtimes);
         };
         
         const clearFilters = () => {
             elements.movieFilter.value = '';
             elements.theaterFilter.value = '';
-            if (window.allShowtimes) displayShowtimes(window.allShowtimes);
+            displayShowtimes(allShowtimes);
         };
         
         elements.movieFilter.onchange = elements.theaterFilter.onchange = () => {
-            if (window.allShowtimes) displayShowtimes(window.allShowtimes);
-        };
-        
-        // Store showtimes for filtering
-        const originalDisplayShowtimes = displayShowtimes;
-        window.displayShowtimes = (showtimes) => {
-            window.allShowtimes = showtimes;
-            originalDisplayShowtimes(showtimes);
+            displayShowtimes(allShowtimes);
         };
         
         // Initialize

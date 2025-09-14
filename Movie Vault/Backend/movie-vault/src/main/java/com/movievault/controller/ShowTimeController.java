@@ -32,10 +32,10 @@ public class ShowTimeController {
     @Autowired
     private TheaterRepository theaterRepository;
     
-    // Get all showtimes
+  
     @GetMapping
     public List<ShowTime> getAllShowTimes() {
-        // Debug log for troubleshooting
+        
         List<ShowTime> allShowtimes = showTimeRepository.findAll();
         System.out.println("Found " + allShowtimes.size() + " showtimes in database");
         for (ShowTime showTime : allShowtimes) {
@@ -46,7 +46,7 @@ public class ShowTimeController {
         return allShowtimes;
     }
     
-    // Get showtime by ID
+ 
     @GetMapping("/{id}")
     public ResponseEntity<?> getShowTimeById(@PathVariable Long id) {
         Optional<ShowTime> showTime = showTimeRepository.findById(id);
@@ -61,47 +61,40 @@ public class ShowTimeController {
         }
     }
     
-    // Get showtimes by movie ID
+  
     @GetMapping("/movie/{movieId}")
     public List<ShowTime> getShowTimesByMovie(@PathVariable Long movieId) {
-        List<ShowTime> showtimes = showTimeRepository.findByMovieId(movieId);
+        List<ShowTime> showtimes = showTimeRepository.findByMovie_Id(movieId);
         System.out.println("Found " + showtimes.size() + " showtimes for movie ID " + movieId);
         return showtimes;
     }
     
-    // Get showtimes by theater ID
+
     @GetMapping("/theater/{theaterId}")
     public List<ShowTime> getShowTimesByTheater(@PathVariable Long theaterId) {
-        List<ShowTime> showtimes = showTimeRepository.findByTheaterId(theaterId);
+        List<ShowTime> showtimes = showTimeRepository.findByTheater_Id(theaterId);
         System.out.println("Found " + showtimes.size() + " showtimes for theater ID " + theaterId);
         return showtimes;
     }
     
-    // Add a new showtime
     @PostMapping
     public ResponseEntity<?> addShowTime(@RequestBody Map<String, Object> request) {
         try {
-            // Extract data from request
+      
             Long movieId = Long.valueOf(request.get("movieId").toString());
             Long theaterId = Long.valueOf(request.get("theaterId").toString());
             String startTimeStr = request.get("startTime").toString();
             String endTimeStr = request.get("endTime").toString();
-            
-            // Parse the datetime strings
             LocalDateTime startTime = LocalDateTime.parse(startTimeStr);
             LocalDateTime endTime = LocalDateTime.parse(endTimeStr);
-            
-            // Fetch Movie and Theater entities
             Optional<Movie> movieOpt = movieRepository.findById(movieId);
             Optional<Theater> theaterOpt = theaterRepository.findById(theaterId);
-            
             if (!movieOpt.isPresent()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);
                 response.put("message", "Movie not found with id " + movieId);
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
             }
-            
             if (!theaterOpt.isPresent()) {
                 Map<String, Object> response = new HashMap<>();
                 response.put("success", false);

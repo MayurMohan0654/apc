@@ -21,8 +21,6 @@ public class UserController {
     @PostMapping("/register")
     public ResponseEntity<?> registerUser(@RequestBody User user) {
         Map<String, Object> response = new HashMap<>();
-        
-        // Check if email already exists
         if (userRepository.existsByEmail(user.getEmail())) {
             response.put("success", false);
             response.put("message", "Email already registered");

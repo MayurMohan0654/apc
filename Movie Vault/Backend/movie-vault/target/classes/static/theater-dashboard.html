@@ -97,7 +97,6 @@
         const API = '/api', user = JSON.parse(localStorage.getItem('currentUser') || '{}'), type = localStorage.getItem('userType');
         if (!user || type !== 'theater') window.location.href = 'index.html';
         
-        // Utilities
         const $ = id => document.getElementById(id), $$ = sel => document.querySelectorAll(sel);
         const api = async (url, opt = {}) => { try { const r = await fetch(API + url, opt); return r.ok ? await r.json() : null; } catch (e) { console.error(e); return null; } };
         const poster = (m, s = {w: 300, h: 450}) => {
@@ -119,11 +118,10 @@
                      mList: $('movie-list'), search: $('movie-search'), searchBtn: $('search-btn'), clear: $('clear-search-btn'), 
                      count: $('movie-count-text'), form: $('add-showtime-form') };
         
-        // Initialize
+
         els.name.textContent = user.name;
         els.logout.onclick = () => { localStorage.clear(); window.location.href = 'index.html'; };
         
-        // Navigation
         els.links.forEach(link => {
             link.onclick = e => {
                 e.preventDefault();
@@ -132,16 +130,14 @@
                 const pageId = link.dataset.page + '-page';
                 els.pages.forEach(p => p.style.display = p.id === pageId ? 'block' : 'none');
                 
-                const pageActions = {
-                    'add-showtime-page': loadMovies, 
-                    'my-showtimes-page': loadShowtimes, 
-                    'movies-page': () => {
-                        loadExternal('popular');
-                        setTimeout(() => els.search.focus(), 100);
-                    }
-                };
-                
-                pageActions[pageId]?.();
+                if (pageId === 'add-showtime-page') {
+                    loadMovies();
+                } else if (pageId === 'my-showtimes-page') {
+                    loadShowtimes();
+                } else if (pageId === 'movies-page') {
+                    loadExternal('avengers');
+                    setTimeout(() => els.search.focus(), 100);
+                }
             };
         });
         
@@ -154,7 +150,7 @@
         els.searchBtn.onclick = search;
         els.clear.onclick = () => { 
             els.search.value = ''; 
-            loadExternal('popular'); 
+            loadExternal('avengers'); 
         };
         els.search.oninput = () => { 
             if (els.search.value.length > 2) {
@@ -169,7 +165,7 @@
             }
         };
         
-        // Load Functions
+     
         const loadMovies = async () => {
             hideErr();
             const data = await api('/movies');
@@ -179,54 +175,36 @@
             } else showErr('Error loading movies');
         };
         
-        const loadExternal = async (query = 'popular') => {
-            if (!els.mList) return;
-            console.log('Loading external movies with query:', query);
-            els.mList.innerHTML = '<div class="loading">Loading movies...</div>';
+        const loadExternal = async (query = 'avengers') => {
+            els.mList.innerHTML = '<div class="loading">Loading...</div>';
+            const data = await api(`/allMovies?query=${encodeURIComponent(query)}`);
             
-            try {
-                const data = await api(`/allMovies?query=${encodeURIComponent(query)}`);
-                console.log('API response:', data);
-                
-                if (data && Array.isArray(data)) {
-                    movies = data;
-                    els.count.textContent = `${data.length} movies found`;
-                    if (!data.length) {
-                        els.mList.innerHTML = '<div class="message">No movies found for your search.</div>';
-                        return;
-                    }
-                    els.mList.innerHTML = data.map((m, index) => {
-                        const date = m.release_date ? new Date(m.release_date).toLocaleDateString() : 'N/A';
-                        const hasImage = m.poster_path || m.imageUrl;
-                        
-                        return `
-                            <div class="movie-card">
-                                <div class="movie-poster">
-                                    ${hasImage ? poster(m) : placeholder(m.title)}
-                                    <div class="movie-rating-badge">${m.vote_average ? m.vote_average.toFixed(1) : 'N/A'}</div>
-                                </div>
-                                <div class="movie-details">
-                                    <h3 class="movie-title">${m.title}</h3>
-                                    <div class="movie-meta">
-                                        <div class="movie-info"><span class="info-label">Language:</span><span class="info-value">${m.original_language?.toUpperCase() || 'N/A'}</span></div>
-                                        <div class="movie-info"><span class="info-label">Release:</span><span class="info-value">${date}</span></div>
-                                        <div class="movie-info"><span class="info-label">Rating:</span><span class="info-value">${m.vote_average ? m.vote_average.toFixed(1) : 'N/A'}</span></div>
-                                    </div>
-                                    ${m.overview ? `<div class="movie-description">${m.overview.length > 100 ? m.overview.substring(0, 100) + '...' : m.overview}</div>` : ''}
-                                    <div class="movie-actions">
-                                        <button class="btn btn-primary" onclick="quickAdd(${index})">Quick Add Showtime</button>
-                                    </div>
-                                </div>
-                            </div>`;
-                    }).join('');
-                } else {
-                    throw new Error('Invalid response format');
-                }
-            } catch (error) {
-                console.error('Error loading external movies:', error);
-                els.mList.innerHTML = '<div class="message">Error loading movies. Please check your connection and try again.</div>';
+            if (!data?.length) {
+                els.mList.innerHTML = '<div class="message">No movies found.</div>';
                 els.count.textContent = '0 movies found';
+                return;
             }
+            
+            movies = data;
+            els.count.textContent = `${data.length} movies found`;
+            els.mList.innerHTML = data.map((m, i) => {
+                const img = m.poster_path ? poster(m) : placeholder(m.title);
+                const desc = m.overview?.length > 100 ? m.overview.substring(0, 100) + '...' : m.overview || '';
+                
+                return `<div class="movie-card">
+                    <div class="movie-poster">${img}<div class="movie-rating-badge">${m.vote_average?.toFixed(1) || 'N/A'}</div></div>
+                    <div class="movie-details">
+                        <h3>${m.title}</h3>
+                        <div class="movie-meta">
+                            <div class="movie-info"><span>Lang:</span><span>${m.original_language?.toUpperCase() || 'N/A'}</span></div>
+                            <div class="movie-info"><span>Release:</span><span>${m.release_date ? new Date(m.release_date).toLocaleDateString() : 'N/A'}</span></div>
+                            <div class="movie-info"><span>Rating:</span><span>${m.vote_average?.toFixed(1) || 'N/A'}</span></div>
+                        </div>
+                        ${desc ? `<div class="movie-description">${desc}</div>` : ''}
+                        <button class="btn btn-primary" onclick="quickAdd(${i})">Quick Add</button>
+                    </div>
+                </div>`;
+            }).join('');
         };
         
         const loadShowtimes = async () => {
@@ -264,24 +242,19 @@
             }).join('');
         };
         
-        // Quick Add & Bookings
-        const quickAdd = async (movieIndex) => {
-            const m = movies[movieIndex];
-            if (!m) return;
-            
-            const check = await api(`/movies/exists?title=${encodeURIComponent(m.title)}`);
-            if (!check?.exists) {
-                const movieData = { 
-                    title: m.title, 
-                    genre: 'Action', 
-                    duration: 120, 
-                    language: m.original_language || 'en', 
-                    releaseDate: m.release_date || null, 
-                    rating: m.vote_average || 0, 
-                    description: m.overview || '', 
-                    imageUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null 
-                };
-                await api('/movies', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movieData) });
+        const quickAdd = async (i) => {
+            const m = movies[i];
+            const exists = await api(`/movies/exists?title=${encodeURIComponent(m.title)}`);
+            if (!exists?.exists) {
+                await api('/movies', { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify({ 
+                        title: m.title, genre: 'Action', duration: 120, language: m.original_language || 'en', 
+                        releaseDate: m.release_date, rating: m.vote_average || 0, description: m.overview || '', 
+                        imageUrl: m.poster_path ? `https://image.tmdb.org/t/p/w500${m.poster_path}` : null 
+                    }) 
+                });
             }
             els.links[0].click();
             await loadMovies();
@@ -289,7 +262,7 @@
                 const opt = Array.from(els.movieSel.options).find(o => o.textContent.toLowerCase().includes(m.title.toLowerCase()));
                 if (opt) els.movieSel.value = opt.value;
             }, 100);
-            alert(`${m.title} selected for showtime!`);
+            alert(`${m.title} selected!`);
         };
         
         const loadBookings = async (id, btn) => {
@@ -310,8 +283,7 @@
                 data.map(b => `<div class="booking-item"><h4>ID: ${b.id}</h4><p>User: ${b.user.name}</p><p>Email: ${b.user.email}</p><p>Booked: ${new Date(b.bookingDate).toLocaleString()}</p></div>`).join('') + '</div>';
             container.insertAdjacentHTML('beforeend', bookingHtml);
         };
-        
-        // Form Submit
+
         els.form.onsubmit = async e => {
             e.preventDefault();
             hideErr();
@@ -330,7 +302,7 @@
         };
         
         // Initialize
-        loadMovies();
+        loadMovies("avengers");
     </script>
 </body>
 </html>
