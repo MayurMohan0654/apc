@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Movie Vault - Your Ticket to Entertainment</title>
+    <link rel="stylesheet" href="./css/index.css">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <a href="index.html" class="logo">Movie<span>Vault</span></a>
+        </div>
+    </header>
+
+    <section class="hero">
+        <div class="hero-content">
+            <h1>Welcome to Movie Vault</h1>
+            <p>Book your tickets online for the latest movies in theaters near you.</p>
+            <div>
+                <a href="#auth-section" class="btn">Get Started</a>
+            </div>
+        </div>
+    </section>
+
+    <div class="container" id="auth-section">
+        <div class="auth-container">
+            <div class="auth-header">
+                <h2>Access Your Account</h2>
+                <div class="tabs">
+                    <div class="tab active" id="login-tab">Login</div>
+                    <div class="tab" id="register-tab">Register</div>
+                </div>
+            </div>
+            
+            <div class="user-type-selector">
+                <div class="user-type active" id="user-type-user">User</div>
+                <div class="user-type" id="user-type-theater">Theater</div>
+            </div>
+            
+            <!-- Login Forms -->
+            <div class="form-container active" id="login-form">
+                <!-- User Login Form -->
+                <form class="auth-form" id="user-login-form">
+                    <div class="form-group">
+                        <label for="user-email">Email</label>
+                        <input type="email" id="user-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="user-password">Password</label>
+                        <input type="password" id="user-password" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="btn btn-block">Login</button>
+                    <div class="error-message" id="user-login-error"></div>
+                </form>
+                
+                <!-- Theater Login Form (Hidden by default) -->
+                <form class="auth-form" id="theater-login-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="theater-name">Theater Name</label>
+                        <input type="text" id="theater-name" placeholder="Enter theater name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="theater-password">Password</label>
+                        <input type="password" id="theater-password" placeholder="Enter password" required>
+                    </div>
+                    <button type="submit" class="btn btn-block">Login</button>
+                    <div class="error-message" id="theater-login-error"></div>
+                </form>
+            </div>
+            
+            <!-- Register Forms -->
+            <div class="form-container" id="register-form">
+                <!-- User Registration Form -->
+                <form class="auth-form" id="user-register-form">
+                    <div class="form-group">
+                        <label for="reg-user-name">Full Name</label>
+                        <input type="text" id="reg-user-name" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-user-email">Email</label>
+                        <input type="email" id="reg-user-email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-user-phone">Phone</label>
+                        <input type="tel" id="reg-user-phone" placeholder="Enter your phone number" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-user-password">Password</label>
+                        <input type="password" id="reg-user-password" placeholder="Create a password" required>
+                    </div>
+                    <button type="submit" class="btn btn-block">Register</button>
+                    <div class="error-message" id="user-register-error"></div>
+                </form>
+                
+                <!-- Theater Registration Form (Hidden by default) -->
+                <form class="auth-form" id="theater-register-form" style="display: none;">
+                    <div class="form-group">
+                        <label for="reg-theater-name">Theater Name</label>
+                        <input type="text" id="reg-theater-name" placeholder="Enter theater name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-theater-city">City</label>
+                        <input type="text" id="reg-theater-city" placeholder="Enter city" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-theater-password">Password</label>
+                        <input type="password" id="reg-theater-password" placeholder="Create a password" required>
+                    </div>
+                    <button type="submit" class="btn btn-block">Register</button>
+                    <div class="error-message" id="theater-register-error"></div>
+                </form>
+            </div>
+            
+            <div class="auth-footer">
+                <p id="login-footer">Don't have an account? <a href="#" id="show-register">Register now</a></p>
+                <p id="register-footer" style="display: none;">Already have an account? <a href="#" id="show-login">Login</a></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = '/api';
+        
+        // Get DOM elements efficiently
+        const getEl = id => document.getElementById(id);
+        const elements = {
+            loginTab: getEl('login-tab'),
+            registerTab: getEl('register-tab'),
+            loginForm: getEl('login-form'),
+            registerForm: getEl('register-form'),
+            userType: {
+                user: getEl('user-type-user'),
+                theater: getEl('user-type-theater')
+            },
+            forms: {
+                userLogin: getEl('user-login-form'),
+                theaterLogin: getEl('theater-login-form'),
+                userRegister: getEl('user-register-form'),
+                theaterRegister: getEl('theater-register-form')
+            }
+        };
+        
+        // Generic form toggle function
+        const toggleActive = (activeEl, inactiveEl, show, hide) => {
+            activeEl.classList.add('active');
+            inactiveEl.classList.remove('active');
+            show.forEach(el => el.style.display = 'block');
+            hide.forEach(el => el.style.display = 'none');
+        };
+        
+        // Tab switching
+        elements.loginTab.onclick = () => toggleActive(
+            elements.loginTab, elements.registerTab,
+            [elements.loginForm, getEl('login-footer')],
+            [elements.registerForm, getEl('register-footer')]
+        );
+        
+        elements.registerTab.onclick = () => toggleActive(
+            elements.registerTab, elements.loginTab,
+            [elements.registerForm, getEl('register-footer')],
+            [elements.loginForm, getEl('login-footer')]
+        );
+        
+        // User type switching
+        elements.userType.user.onclick = () => toggleActive(
+            elements.userType.user, elements.userType.theater,
+            [elements.forms.userLogin, elements.forms.userRegister],
+            [elements.forms.theaterLogin, elements.forms.theaterRegister]
+        );
+        
+        elements.userType.theater.onclick = () => toggleActive(
+            elements.userType.theater, elements.userType.user,
+            [elements.forms.theaterLogin, elements.forms.theaterRegister],
+            [elements.forms.userLogin, elements.forms.userRegister]
+        );
+        
+        // Footer link handlers
+        getEl('show-register').onclick = e => { e.preventDefault(); elements.registerTab.click(); };
+        getEl('show-login').onclick = e => { e.preventDefault(); elements.loginTab.click(); };
+        
+        // Generic API call function
+        const apiCall = async (url, data, errorEl, successCallback) => {
+            errorEl.style.display = 'none';
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    successCallback(result);
+                } else {
+                    errorEl.textContent = result.message || 'Operation failed';
+                    errorEl.style.display = 'block';
+                }
+            } catch (error) {
+                errorEl.textContent = 'An error occurred. Please try again.';
+                errorEl.style.display = 'block';
+                console.error('Error:', error);
+            }
+        };
+        
+        // Form configurations
+        const formConfigs = {
+            userLogin: {
+                url: `${API_BASE_URL}/users/login`,
+                getData: () => ({ 
+                    email: getEl('user-email').value, 
+                    password: getEl('user-password').value 
+                }),
+                success: data => {
+                    localStorage.setItem('currentUser', JSON.stringify(data.user));
+                    localStorage.setItem('userType', 'user');
+                    window.location.href = 'user-dashboard.html';
+                }
+            },
+            theaterLogin: {
+                url: `${API_BASE_URL}/theaters/login`,
+                getData: () => ({ 
+                    name: getEl('theater-name').value, 
+                    password: getEl('theater-password').value 
+                }),
+                success: data => {
+                    localStorage.setItem('currentUser', JSON.stringify(data.theater));
+                    localStorage.setItem('userType', 'theater');
+                    window.location.href = 'theater-dashboard.html';
+                }
+            },
+            userRegister: {
+                url: `${API_BASE_URL}/users/register`,
+                getData: () => ({
+                    name: getEl('reg-user-name').value,
+                    email: getEl('reg-user-email').value,
+                    phone: getEl('reg-user-phone').value,
+                    password: getEl('reg-user-password').value
+                }),
+                success: () => {
+                    alert('Registration successful! Please login with your credentials.');
+                    elements.loginTab.click();
+                }
+            },
+            theaterRegister: {
+                url: `${API_BASE_URL}/theaters/register`,
+                getData: () => ({
+                    name: getEl('reg-theater-name').value,
+                    city: getEl('reg-theater-city').value,
+                    password: getEl('reg-theater-password').value
+                }),
+                success: () => {
+                    alert('Theater registration successful! Please login with your credentials.');
+                    elements.loginTab.click();
+                }
+            }
+        };
+        
+        // Attach form handlers
+        Object.entries(formConfigs).forEach(([formType, config]) => {
+            const formEl = elements.forms[formType];
+            const errorEl = getEl(`${formType.replace(/([A-Z])/g, '-$1').toLowerCase()}-error`);
+            
+            formEl.onsubmit = e => {
+                e.preventDefault();
+                apiCall(config.url, config.getData(), errorEl, config.success);
+            };
+        });
+        
+        // Check if already logged in
+        window.addEventListener('DOMContentLoaded', () => {
+            const currentUser = localStorage.getItem('currentUser');
+            const userType = localStorage.getItem('userType');
+            
+            if (currentUser && userType) {
+                window.location.href = userType === 'user' ? 'user-dashboard.html' : 'theater-dashboard.html';
+            }
+        });
+    </script>
+</body>
+</html>
